@@ -13,6 +13,14 @@
 #define BRUTE_HP   12
 #define BRUTE_RAD  16
 
+//New enemy SHOOTER -> shoot randomly
+#define SHOOTER_HP   12
+#define SHOOTER_RAD  20
+
+//New enemy KILLER -> shoot following the player
+#define KILLER_HP   16
+#define KILLER_RAD  20
+
 #define BULLET_DMG 3
 #define BULLET_SPEED 16
 #define BULLET_RAD   5
@@ -26,7 +34,7 @@ typedef struct {
 } player;
 
 // ==== ENEMY DEFINITION
-typedef enum {MINION=0, BRUTE=1} enemykind;
+typedef enum {MINION=0, BRUTE=1,SHOOTER=2,KILLER=3} enemykind;
 
 typedef struct {
     entity ent;
@@ -37,6 +45,8 @@ typedef struct {
 
 typedef struct {
     entity ent;
+    // State 0 when player shoot, State 1 and 2 when enemy shoot
+    int state;
     // TODO: We may want to add more fields...
 } bullet;
 
