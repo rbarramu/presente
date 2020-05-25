@@ -49,6 +49,13 @@ void state_update(level *lvl, state *sta){
         sta->pla.ent.vy = mov_y/mov_norm * PLAYER_SPEED;
     }
 
+    //Check if player is dead to end game
+    if (sta->pla.ent.dead){
+        sta->pla.ent.hp = 0;
+        sta->n_bullets = 0;
+        DrawText((FormatText("GAME OVER ")), GetScreenWidth()/2.0 - 50, GetScreenHeight()/2.0, 50, DARKPURPLE);
+    }
+    
     // == Make the player shoot
     // Lower the player's cooldown by 1
     sta->pla.cooldown -= 1;
