@@ -1,5 +1,8 @@
 #include "state.h"
 
+#include "draw.h"
+#include <raylib.h>
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
