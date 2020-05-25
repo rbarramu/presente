@@ -72,16 +72,113 @@ void state_update(level *lvl, state *sta){
         }
     }
 
-    // == Check bullet-enemy collisions
-    for(int i=0;i<sta->n_bullets;i++){
-        for(int k=0;k<sta->n_enemies;k++){
-            // If a bullet is colliding with an enemy
-            if(entity_collision(&sta->bullets[i].ent,&sta->enemies[k].ent)){
-                // Reduce enemy's health by bullet's health and kill bullet
-                sta->enemies[k].ent.hp -= sta->bullets[i].ent.hp;
-                sta->bullets[i].ent.dead = 1;
+    //Total numbers of enemies
+   int totalShooters = 0;
+   int totalKillers = 0;
+   int totalMinions = 0;
+   int totalBrute = 0; 
+
+   for(int i=0;i<sta->n_enemies;i++){
+       if(sta->enemies[i].kind == SHOOTER){
+           totalShooters = totalShooters + 1;
+       }else if(sta->enemies[i].kind == KILLER){
+           totalKillers = totalKillers + 1;
+       }else if(sta->enemies[i].kind == MINION){
+           totalMinions = totalMinions + 1;
+       }else{
+           totalBrute = totalBrute + 1;
+       }
+   }
+
+   //Draw
+    DrawText((FormatText("Nº de enemigos SHOOTER: %d",totalShooters)), 10, 20, 20, DARKPURPLE);
+    DrawText((FormatText("Nº de enemigos KILLER: %d",totalKillers)), 10, 40, 20, DARKPURPLE);
+    DrawText((FormatText("Nº de enemigos MINION: %d",totalMinions)), 10, 60, 20, DARKPURPLE);
+    DrawText((FormatText("Nº de enemigos BRUTE: %d",totalBrute)), 10, 80, 20, DARKPURPLE);
+    DrawText((FormatText("HP: %d",sta->pla.ent.hp)), 350, 20, 20, BLUE);
+
+
+     // Update enemys bullets
+    for(int i=0;i<sta->n_enemies;i++){
+        if (sta->enemies[i].kind == SHOOTER && !sta->enemies[i].ent.dead){
+            int timeShot = rand()%80==0; // timeShot has 1/80 chance.
+            if(sta->n_bullets<MAX_BULLETS && timeShot){
+                
+                // The new bullet will be in the nex.t unused position of the bullets array
+                bullet *new_bullet = &sta->bullets[sta->n_bullets];
+                sta->n_bullets += 1;
+                // Initialize all bullet fields to 0
+                memset(new_bullet,0,sizeof(bullet));
+                // Bullet state 1 from enemy
+                new_bullet->state = 1;
+                // Start the bullet on the enemies position
+                new_bullet->ent.x      = sta->enemies[i].ent.x;
+                new_bullet->ent.y      = sta->enemies[i].ent.y;
+                // Bullet speed is set to the aiming angle
+                new_bullet->ent.vx     =  BULLET_SPEED*cos(sta->aim_angle);
+                new_bullet->ent.vy     = -BULLET_SPEED*sin(sta->aim_angle);
+                //
+                new_bullet->ent.rad    = BULLET_RAD;
+                new_bullet->ent.hp     = BULLET_SHOOTER_DMG;
+                
+            }
+
+        }else if (sta->enemies[i].kind == KILLER && !sta->enemies[i].ent.dead)
+        {
+            int timeShot = rand()%100==0; // timeShot has 1/100 chance.
+            if(sta->n_bullets<MAX_BULLETS && timeShot){
+                
+                // The new bullet will be in the nex.t unused position of the bullets array
+                bullet *new_bullet = &sta->bullets[sta->n_bullets];
+                sta->n_bullets += 1;
+                // Initialize all bullet fields to 0
+                memset(new_bullet,0,sizeof(bullet));
+                // Bullet state 2 from enemy
+                new_bullet->state = 2;
+                // Start the bullet on the enemies position
+                new_bullet->ent.x      = sta->enemies[i].ent.x;
+                new_bullet->ent.y      = sta->enemies[i].ent.y;
+
+                float x_move = sta->pla.ent.x - sta->enemies[i].ent.x;
+                float y_move = sta->pla.ent.y - sta->enemies[i].ent.y;
+                float hypotenuse = sqrt(x_move * x_move + y_move * y_move);
+
+                // Bullet speed is set to the aiming angle
+                new_bullet->ent.vx     =  x_move / hypotenuse * PLAYER_SPEED;
+                new_bullet->ent.vy     =  y_move / hypotenuse * PLAYER_SPEED;
+            
+                new_bullet->ent.rad    = BULLET_RAD;
+                new_bullet->ent.hp     = BULLET_KILLER_DMG;
+                
             }
         }
+        
+    }
+
+    // Check collide 
+    for(int i=0;i<sta->n_bullets;i++){
+        // If a bullet from an enemy is colliding with an player
+        if(sta->bullets[i].state != 0)
+        {
+            // == Check bullet-player collisions
+            if(entity_collision(&sta->bullets[i].ent,&sta->pla.ent)){
+                // Reduce player's health by bullet's health and kill bullet
+                sta->pla.ent.hp -= sta->bullets[i].ent.hp;
+                sta->bullets[i].ent.dead = 1;
+            }
+        }else
+        {
+            for(int k=0;k<sta->n_enemies;k++){
+                 // == Check bullet-enemy collisions
+                if(entity_collision(&sta->bullets[i].ent,&sta->enemies[k].ent)){
+                // Reduce enemy's health by bullet's health and kill bullet
+                sta->enemies[k].ent.hp -= sta->bullets[i].ent.hp;
+                sta->bullets[i].ent.dead = 1;      
+                }
+            }
+           
+        }
+        
     }
 
     // == Update entities
@@ -152,11 +249,27 @@ void state_populate_random(level *lvl, state *sta, int n_enemies){
                 new_enemy->ent.x = (posx+0.5)*TILE_SIZE;
                 new_enemy->ent.y = (posy+0.5)*TILE_SIZE;
                 // Pick an enemy tipe and set variables accordingly
-                int brute = rand()%4==0; // brute has 1/4 chance.
-                if(brute){
-                    new_enemy->kind   = BRUTE;
-                    new_enemy->ent.hp = BRUTE_HP;
-                    new_enemy->ent.rad = BRUTE_RAD;
+                int special = rand()%2==0; // special has 1/2 chance.
+                int brute = rand()%2==0; // brute has 1/2 chance.
+                int shooter = rand()%2==0; // shooter has 1/2 chance.
+
+                //special represent all enemies that are not minion
+                if(special){
+                    if(brute){
+                        new_enemy->kind   = BRUTE;
+                        new_enemy->ent.hp = BRUTE_HP;
+                        new_enemy->ent.rad = BRUTE_RAD;
+                    }else{
+                        if(shooter){
+                            new_enemy->kind   = SHOOTER;
+                            new_enemy->ent.hp = SHOOTER_HP;
+                            new_enemy->ent.rad = SHOOTER_RAD;
+                        }else{
+                            new_enemy->kind   = KILLER;
+                            new_enemy->ent.hp = KILLER_HP;
+                            new_enemy->ent.rad = KILLER_RAD;
+                        }
+                    }
                 }else{
                     new_enemy->kind   = MINION;
                     new_enemy->ent.hp = MINION_HP;

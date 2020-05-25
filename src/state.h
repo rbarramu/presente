@@ -22,6 +22,8 @@
 #define KILLER_RAD  20
 
 #define BULLET_DMG 3
+#define BULLET_SHOOTER_DMG 3 //damage of bullet shooter enemy
+#define BULLET_KILLER_DMG 4 //damage of bullet killer enemy
 #define BULLET_SPEED 16
 #define BULLET_RAD   5
 
